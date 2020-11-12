@@ -1,0 +1,179 @@
+#:kivy 1.11.1
+#:import Clock kivy.clock.Clock
+
+<Accelerometer>:
+    orientation: 'vertical'
+    ActionBar:
+        pos_hint: {"top": 1}
+        icon: self.icon
+
+        ActionView:
+            use_separator: False
+            ActionPrevious:
+                markup: True
+                title: '[b]Accelerometer[/b]'
+                with_previous: False
+                app_icon: './images/icon_labo.png'
+                color: (1, 0, 0.5, 1)
+                font_size: '[size]40sp[/size]'
+            ActionOverflow:
+            ActionButton:
+                icon: './images/icon_labo.png'
+                on_release: app.root.ids.sm.current = "main"
+            ActionButton:
+                # #important: True  # place après Btn2 !
+                text: 'Activité'
+                on_release: app.root.ids.sm.current = "first"
+            ActionButton:
+                text: 'Courbe'
+                on_release: app.root.ids.sm.current = "second"
+            ActionGroup:
+                text: 'Options'
+                ActionButton:
+                    text: 'Options Yelen'
+                    on_release: app.open_settings()
+                ActionButton:
+                    text: 'Main'
+                    on_release: app.root.ids.sm.current = "main"
+
+    ScreenManager:
+        id: sm
+        MainScreen:
+        Screen1:
+        Screen2:
+
+<MainScreen>:
+    name: 'main'
+    canvas.before:
+        Rectangle:
+            pos: self.pos
+            size: self.size
+            source: './images/labo_bgd.png'
+
+    BoxLayout:
+        orientation: "vertical"
+        padding: 10, 10
+        Button:
+            text: 'Accéléromètre'
+            background_color: (0, 0, 0, 0)
+            font_size: "28sp"
+            on_press: app.root.ids.sm.current = "first"
+
+
+<Screen1>:
+    name: 'first'
+    BoxLayout:
+        orientation: 'vertical'
+        BoxLayout:
+            orientation: 'vertical'
+            size_hint_y: 0.54
+            Label:
+                id: x_y_z
+                font_size: "22sp"
+                text: 'X: Y: Z:'
+            Label:
+                id: activ_sensor
+                font_size: "22sp"
+                text: 'Capteur actif: '
+            Label:
+                id: th_freq
+                font_size: "18sp"
+                text: 'Fréquence à obtenir = 10'
+            Label:
+                id: real_freq
+                font_size: "18sp"
+                text: 'Fréquence réelle ='
+            Label:
+                id: activity_label
+                font_size: "18sp"
+                text: 'Activité: '
+        BoxLayout:
+            size_hint_y: 0.1
+            ToggleButton:
+                id: acceleromer_status
+                background_color: (0, 1.2, 0, 1)
+                font_size: "22sp"
+                text: "Lancer l'accéléromètre"
+                on_press: root.on_sensor_enable()
+        BoxLayout:
+            orientation: 'horizontal'
+            size_hint_y: 0.1
+            ToggleButton:
+                group: 'action'
+                size_hint_x: 0.50
+                background_color: (1, 0, 1, 1)
+                text: 'Application réduite'
+                color: (0, 1, 0, 1)
+                font_size: "14sp"
+                on_press: root.on_activity(0)
+            ToggleButton:
+                group: 'action'
+                size_hint_x: 0.50
+                background_color: (1, 0, 1, 1)
+                text: 'Application plein ecran\nCouvercle rabattu'
+                color: (0, 1, 0, 1)
+                font_size: "14sp"
+                on_press: root.on_activity(1)
+        BoxLayout:
+            orientation: 'horizontal'
+            size_hint_y: 0.1
+            ToggleButton:
+                group: 'action'
+                size_hint_x: 0.50
+                background_color: (1, 0, 1, 1)
+                text: 'Application plein ecran\nCouvercle ouvert'
+                color: (0, 1, 0, 1)
+                font_size: "14sp"
+                on_press: root.on_activity(2)
+            ToggleButton:
+                group: 'action'
+                size_hint_x: 0.50
+                background_color: (1, 0, 1, 1)
+                text: 'Application plein ecran\nCouvercle rabattu\nen mouvement'
+                color: (0, 1, 0, 1)
+                font_size: "14sp"
+                on_press: root.on_activity(3)
+        BoxLayout:
+            size_hint_y: 0.08
+            orientation: 'horizontal'
+            Button:
+                id: save_button
+                markup: True
+                background_color: (0, 1.2, 0, 1)
+                font_size: "18sp"
+                text: '[b]Courbe[/b]'
+                on_release: app.root.ids.sm.current = "second"
+            Button:
+                id: save_npz
+                background_color: (0, 1.2, 0, 1)
+                font_size: "18sp"
+                markup: True
+                text: '[b]Enregistrement[/b]'
+                on_press: root.do_save_npz()
+                on_release: Clock.schedule_once(root.reset_save_npz_button, 2)
+        BoxLayout:
+            size_hint_y: 0.08
+            orientation: 'horizontal'
+            Button:
+                id: settings_button
+                markup: True
+                background_color: (0, 1.2, 0, 1)
+                font_size: "18sp"
+                text: '[b]Options[/b]'
+                on_release: app.open_settings()
+            Button:
+                id: quit_button
+                markup: True
+                background_color: (0, 1.2, 0, 1)
+                font_size: "18sp"
+                text: '[b]Quitter[/b]'
+                on_release: root.do_quit()
+
+<Screen2>:
+    name: 'second'
+    BoxLayout:  # boite globale
+        orientation: 'vertical'
+        id: boite_globale
+        BoxLayout:  # graph
+            size_hint_y: 1.0
+            id: graph_id
