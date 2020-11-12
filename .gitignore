@@ -6,13 +6,12 @@
 # divers non suivi
 old/
 accelerometer/
-bin/
 npz_final/
 .buildozer/
 accelerometer.ini
 
 # Forced !/poesie/poesie_1/poesie_clean.txt
-
+#!/bin/accelerometer-3.03-armeabi-v7a-debug.apk
 
 # Python test
 *_old.py
