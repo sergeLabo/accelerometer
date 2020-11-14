@@ -30,7 +30,7 @@
             ActionGroup:
                 text: 'Options'
                 ActionButton:
-                    text: 'Options Yelen'
+                    text: 'Options Accelerometer'
                     on_release: app.open_settings()
                 ActionButton:
                     text: 'Main'
@@ -53,12 +53,18 @@
     BoxLayout:
         orientation: "vertical"
         padding: 10, 10
-        Button:
-            text: 'Accéléromètre'
-            background_color: (0, 0, 0, 0)
-            font_size: "28sp"
-            on_press: app.root.ids.sm.current = "first"
-
+        BoxLayout:
+            orientation: "vertical"
+            BoxLayout:
+                size_hint_y: 0.7
+            Button:
+                size_hint_y: 0.2
+                text: 'Accéléromètre'
+                background_color: (0, 0, 0, 0)
+                font_size: "28sp"
+                on_press: app.root.ids.sm.current = "first"
+            BoxLayout:
+                size_hint_y: 0.1
 
 <Screen1>:
     name: 'first'
@@ -175,5 +181,31 @@
         orientation: 'vertical'
         id: boite_globale
         BoxLayout:  # graph
-            size_hint_y: 1.0
+            size_hint_y: 0.93
             id: graph_id
+        BoxLayout:
+            size_hint_y: 0.07
+            orientation: 'horizontal'
+            Button:
+                id: recul
+                markup: True
+                background_color: (0, 1.2, 0, 1)
+                font_size: "18sp"
+                text: '[b]<<<[/b]'
+                on_press: root.do_back_forward(-1)
+                on_release: root.do_end()
+            Button:
+                id: avance
+                markup: True
+                background_color: (0, 1.2, 0, 1)
+                font_size: "18sp"
+                text: '[b]>>>[/b]'
+                on_press: root.do_back_forward(1)
+                on_release: root.do_end()
+            Button:
+                id: last
+                markup: True
+                background_color: (0, 1.2, 0, 1)
+                font_size: "18sp"
+                text: '[b]---[/b]'
+                on_release: root.do_last()

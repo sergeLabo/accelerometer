@@ -47,7 +47,7 @@ print("Android =", ANDROID)
 if not ANDROID:
     from kivy.core.window import Window
     # Simulation de l'écran de mon tél: 1280*720
-    k = 1.0
+    k = 0.8
     WS = (int(720*k), int(1280*k))
     Window.size = WS
     os.environ['JAVA_HOME'] = '/usr/lib/jvm/adoptopenjdk-8-hotspot-amd64'
@@ -80,7 +80,7 @@ class OSC:
         self.sensor = "\nRecherche d'un capteur ..."
         # a, b, c, activity, num, tempo
         self.display_list = [0, 0, 0, -2, 0, 1, 0]
-        self.histo = []
+        # #self.histo = []
         self.histo_xyz = []
         self.server = OSCThreadServer()
         self.server.listen(address=b'localhost',port=3003, default=True)
@@ -100,7 +100,7 @@ class OSC:
                             args[4], args[5], args[6]]
         a, b, c, t = (args[0], args[1], args[2], args[6])
 
-        # dans service: t=int(time()*1000)-1604000000000 get_datetime() convertit
+        # dans service: t=int(time()*1000)-1604000000000 avec get_datetime()
         t_absolute = get_datetime(t)
 
         # Datetime du début
@@ -112,145 +112,16 @@ class OSC:
 
         norme = int((a**2 + b**2 + c**2)**0.5)
         # liste de couple (x, y)
-        if norme > 10:
-            # Norme
-            self.histo.append((tx, norme))
-            # Par axe
+        # Norme
+        # #self.histo.append((tx, norme))
+        # Par axe
+        if norme > 1:  # Bug au début
             self.histo_xyz.append((tx, (a, b, c)))
-            if len(self.histo) > self.lenght:
-                del self.histo[0]
-                del self.histo_xyz[0]
 
 
 class MainScreen(Screen):
+    """Necéssaire pour la création de l'objet MainScreen"""
     pass
-
-
-class Screen2(Screen):
-    """Affichage en courbe de la dernière minute des normes du vecteur
-    Accélération, actualisée toutes les 2 secondes
-    """
-
-    # #graph_id = ObjectProperty()
-
-    def __init__(self, **kwargs):
-        """self.graph ne peut pas être initié ici.
-        Il doit être dans une autre méthode et appelé plus tard.
-        """
-
-        super().__init__(**kwargs)
-        self.app = App.get_running_app()
-
-        self.graph = None
-        self.ylabel = "Norme du vecteur accélération"
-        self.titre = "Accelerometer"
-        self.xlabel = "Dixième de Secondes"
-        self.x_ticks_minor = 5
-        self.x_ticks_major = 100
-        self.y_ticks_major = 3000
-        self.xmin = -500
-        self.xmax = 0
-        self.ymin = -10000
-        self.ymax =  10000
-        self.top = 0
-
-        # Initialisation des courbes avec la couleur
-        self.curve_norme = MeshLinePlot(color=[0, 0, 0, 1])
-        self.curve_norme.points = []
-
-        self.curve_x = MeshLinePlot(color=[0, 0.8, 0, 1])
-        self.curve_x.points = []
-
-        self.curve_y = MeshLinePlot(color=[0.8, 0, 0, 1])
-        self.curve_y.points = []
-
-        self.curve_z = MeshLinePlot(color=[0, 0, 0.8, 1])
-        self.curve_z.points = []
-
-        # Appel tous les 2 secondes
-        Clock.schedule_once(self._once, 1)
-
-    def _once(self, dt):
-        Clock.schedule_interval(self.update, 0.1)
-        self.create_graph()
-
-    def update(self, dt):
-        self.curve_norme.points = []
-        self.curve_x.points = []
-        self.curve_y.points = []
-        self.curve_z.points = []
-
-        if len(self.app.osc.histo) > 5:
-            if self.top % 100 == 0:
-                self.top += 1
-                print("Optimisation de l'échelle des y")
-                # #self.update_y_min_max()
-            for couple in self.app.osc.histo:
-                x = couple[0] - self.app.osc.histo[0][0] - 500
-                y = couple[1]
-                self.curve_norme.points.append((x, y))
-            for couple in self.app.osc.histo_xyz:
-                x = couple[0] - self.app.osc.histo[0][0] - 500
-                y = couple[1][0]
-                self.curve_x.points.append((x, y))
-            for couple in self.app.osc.histo_xyz:
-                x = couple[0] - self.app.osc.histo[0][0] - 500
-                y = couple[1][1]
-                self.curve_y.points.append((x, y))
-            for couple in self.app.osc.histo_xyz:
-                x = couple[0] - self.app.osc.histo[0][0] - 500
-                y = couple[1][2]
-                self.curve_z.points.append((x, y))
-
-    def create_graph(self):
-        print("Création du graph")
-        if self.graph:
-            self.ids.graph_id.remove_widget(self.graph)
-
-        self.graph = Graph( background_color=(0.8, 0.8, 0.8, 1),
-                            border_color=(0, 0.1, 0.1, 1),
-                            xlabel=self.xlabel,
-                            ylabel=self.ylabel,
-                            x_ticks_minor=self.x_ticks_minor,
-                            x_ticks_major=self.x_ticks_major,
-                            y_ticks_major=self.y_ticks_major,
-                            x_grid_label=True,
-                            y_grid_label=True,
-                            padding=10,
-                            x_grid=True,
-                            y_grid=True,
-                            xmin=self.xmin,
-                            xmax=self.xmax,
-                            ymin=self.ymin,
-                            ymax=self.ymax,
-                            tick_color=(1, 0, 1, 1),
-                            label_options={'color': (0.2, 0.2, 0.2, 1)})
-
-        # #self.graph.add_plot(self.curve_norme)
-        self.graph.add_plot(self.curve_x)
-        self.graph.add_plot(self.curve_y)
-        self.graph.add_plot(self.curve_z)
-        self.ids.graph_id.add_widget(self.graph)
-
-    def update_y_min_max(self):
-        a = (self.ymin, self.ymax)
-        if len(self.app.osc.histo) > 5:
-            ymin = 10000
-            ymax = 1
-            for couple in self.app.osc.histo:
-                if couple[1] > ymax:
-                    ymax = couple[1]
-                if couple[1] < ymin:
-                    ymin = couple[1]
-
-        # Changement d'échelle y si beaaucoup d'écart
-        if  ymin < 1.3*self.ymin or\
-            ymin > 1.3*self.ymin or\
-            ymax > 1.3*self.ymax or\
-            ymax < 1.3*self.ymax:
-            self.ymin = ymin
-            self.ymax = ymax
-            self.create_graph()
 
 
 class Screen1(Screen):
@@ -301,7 +172,7 @@ class Screen1(Screen):
                                                 self.app.osc.display_list[4],
                                                 self.app.osc.display_list[5],
                                                 self.app.osc.display_list[6])
-        print(activity)
+
         if activity == 0:
             activity_str = "Application réduite"
         elif activity == 1:
@@ -328,6 +199,168 @@ class Screen1(Screen):
 
     def do_quit(self):
         self.app.do_quit()
+
+
+class Screen2(Screen):
+    """Affichage en courbe de la dernière minute des normes du vecteur
+    Accélération, actualisée toutes les 2 secondes
+    """
+
+    def __init__(self, **kwargs):
+        """self.graph ne peut pas être initié ici.
+        Il doit être dans une autre méthode et appelé plus tard.
+        """
+
+        super().__init__(**kwargs)
+        self.app = App.get_running_app()
+
+        self.graph = None
+        self.ylabel = "Valeur des accélérations sur x y z"
+        self.titre = "Accelerometer"
+        self.xlabel = "Dixième de Secondes"
+        self.x_ticks_minor = 5
+        self.x_ticks_major = 100
+        self.y_ticks_major = 3000
+        self.xmin = -500
+        self.xmax = 0
+        self.ymin = -10000
+        self.ymax =  10000
+        self.gap = 0
+        self.lenght = 0
+        self.bf = 0
+
+        # Initialisation des courbes avec la couleur
+        self.curve_norme = MeshLinePlot(color=[0, 0, 0, 1])
+        self.curve_norme.points = []
+
+        self.curve_x = MeshLinePlot(color=[0, 0.8, 0, 1])
+        self.curve_x.points = []
+
+        self.curve_y = MeshLinePlot(color=[0.8, 0, 0, 1])
+        self.curve_y.points = []
+
+        self.curve_z = MeshLinePlot(color=[0, 0, 0.8, 1])
+        self.curve_z.points = []
+
+        # Appel tous les 2 secondes
+        Clock.schedule_once(self._once, 1)
+
+    def _once(self, dt):
+        Clock.schedule_interval(self.update, 0.1)
+        self.create_graph()
+        self.lenght = self.app.osc.lenght
+
+    def histo_correction(self):
+        """Les valeurs de temps manquantes sont mal affichée par Graph,
+        il y a un saut du graphique au défilement, donc on ne voit pas le "trou"
+        Correction de histo pour ajouter ces valeurs manquantes
+        avec des valeurs xyz = 000
+        hist = self.app.osc.histo_xy
+        Entre 2 valeurs de histo: hist[i+1][0] - hist[i][0] = ~ 1.0
+        Bizarre: ce devrait être 0.1 secondes
+        """
+        # TODO: Pourquoi 1 seconde
+        hist = self.app.osc.histo_xyz
+        # #print("\navant", hist)
+        if len(hist) > 2:
+            for i in range(len(hist)):
+                trou = hist[i][0] - hist[i-1][0]
+                if trou > 2:
+                    index = i  # 21
+                    manque = int(trou - 1)  # 79.53
+                    # #print("index", index, "manque", manque)  # 22 79
+                    # Ajout des valeurs manquantes
+                    debut = hist[index-1][0] + 1
+                    # #print("debut", debut)
+                    for p in range(manque):
+                        hist.insert(index + p, (debut + p*1.01, [0,0,0]))
+                        # #print("i", index + p + 1,  "d", (debut + p*1.01, [0,0,0]))
+        # #print("apres", hist)
+        self.app.osc.histo_xyz = hist
+
+    def update(self, dt):
+        self.histo_correction()
+        self.curve_norme.points = []
+        self.curve_x.points = []
+        self.curve_y.points = []
+        self.curve_z.points = []
+
+        if len(self.app.osc.histo_xyz) > 5:
+            nb = len(self.app.osc.histo_xyz)
+            if nb > self.lenght:
+                d = nb + self.gap - self.lenght
+                f = nb + self.gap
+                if f == 0: f = nb
+                t_debut = self.app.osc.histo_xyz[d][0]
+                # il faut [-500:500] puis [-501:-1] puis [-502:-2]
+                # -500 553 4.96 500
+                for couple in self.app.osc.histo_xyz[d:f]:
+                    self.add_couple(couple, t_debut)
+            else:
+                t_debut = self.app.osc.histo_xyz[0][0]
+                # t_debut = 7.8500000000000005
+                for couple in self.app.osc.histo_xyz:
+                    self.add_couple(couple, t_debut)
+
+    def add_couple(self, couple, t_debut):
+        x = couple[0] - t_debut - self.lenght
+        y = couple[1][0]
+        self.curve_x.points.append((x, y))
+        y = couple[1][1]
+        self.curve_y.points.append((x, y))
+        y = couple[1][2]
+        self.curve_z.points.append((x, y))
+
+    def create_graph(self):
+        print("Création du graph")
+        if self.graph:
+            self.ids.graph_id.remove_widget(self.graph)
+
+        self.graph = Graph( background_color=(0.8, 0.8, 0.8, 1),
+                            border_color=(0, 0.1, 0.1, 1),
+                            xlabel=self.xlabel,
+                            ylabel=self.ylabel,
+                            x_ticks_minor=self.x_ticks_minor,
+                            x_ticks_major=self.x_ticks_major,
+                            y_ticks_major=self.y_ticks_major,
+                            x_grid_label=True,
+                            y_grid_label=True,
+                            padding=10,
+                            x_grid=True,
+                            y_grid=True,
+                            xmin=self.xmin,
+                            xmax=self.xmax,
+                            ymin=self.ymin,
+                            ymax=self.ymax,
+                            tick_color=(1, 0, 1, 1),
+                            label_options={'color': (0.2, 0.2, 0.2, 1)})
+
+        # #self.graph.add_plot(self.curve_norme)
+        self.graph.add_plot(self.curve_x)
+        self.graph.add_plot(self.curve_y)
+        self.graph.add_plot(self.curve_z)
+        self.ids.graph_id.add_widget(self.graph)
+
+    def do_back_forward(self, sens):
+        self.bf = 1
+        bt = Thread(target=self.back_forward_loop, args=(sens, ), daemon=True)
+        bt.start()
+
+    def back_forward_loop(self, sens):
+        while self.bf:
+            sleep(0.1)
+            self.gap = self.gap + sens*10
+            if self.gap > 0: self.gap = 0
+            l = len(self.app.osc.histo_xyz)
+            if self.gap < -l + 500: self.gap = -l + 500
+            print("Gap:", self.gap)
+
+    def do_end(self):
+        self.bf = 0
+
+    def do_last(self):
+        self.gap = 0
+        print("Gap:", self.gap)
 
 
 class Accelerometer(BoxLayout):
@@ -430,19 +463,12 @@ class AccelerometerApp(App):
 
 
 def get_datetime(date):
-    """de int(time()*1000), retourne datetime"""
+    """de int(time()*1000), retourne datetime
+    dans service.py
+    tp = int(time()*1000) - 1604000000000
+    """
     return datetime.fromtimestamp((date + 1604000000000)/1000)
+
 
 if __name__ == '__main__':
     AccelerometerApp().run()
-
-
-"""dir self.curve_norme
-
-'apply_property', 'ask_draw', 'bind', 'color', 'create_drawings', 'create_property', 'dispatch', 'dispatch_children', 'dispatch_generic', 'draw', 'events', 'fbind', 'funbind', 'funcx', 'funcy', 'get_drawings', 'get_group', 'get_property_observers', 'get_px_bounds', 'getter', 'is_event_type', 'iterate_points',
-'mode',
-'on_clear_plot', 'params', 'plot_mesh',
-'points',
-'properties', 'property', 'proxy_ref', 'register_event_type', 'set_mesh_size', 'setter', 'uid', 'unbind', 'unbind_uid', 'unproject', 'unregister_event_types', 'update', 'x_axis', 'x_px', 'y_axis', 'y_px'
-
-"""

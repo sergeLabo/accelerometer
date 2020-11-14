@@ -41,7 +41,6 @@ class AccelerometerService:
         self.real_freq = 2
         self.loop = 1
         self.status = 0
-        # #self.status_msg = ""
         self.sensor_enabled = 0  # 1=android acc, 2=virtualacc
         self.num = 0
         self.t_0 = time()
@@ -188,7 +187,8 @@ class AccelerometerService:
                                     self.real_freq,
                                     tp]
                     # #if self.num % 10 == 1:
-                    self.client.send_message(b'/acc', acc_message)
+                    if not 200 < self.num < 1000:
+                        self.client.send_message(b'/acc', acc_message)
 
                     if self.num % 100 == 0:
                         print("Suivi :", self.num)
@@ -201,13 +201,13 @@ class AccelerometerService:
 
     def get_acc(self):
         a, b, c = 0,0,0
-        if self.sensor_enabled == 1:
+        if self.sensor_enabled == 1:  # android
             val = accelerometer.acceleration[:3]
             if not val == (None, None, None):
                 a = int(val[0]*1000)
                 b = int(val[1]*1000)
                 c = int(val[2]*1000)
-        elif self.sensor_enabled == 2:
+        elif self.sensor_enabled == 2:  # virtual
             self.virtual_acceler.random_acc()
             a = self.virtual_acceler.x
             b = self.virtual_acceler.y
