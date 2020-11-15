@@ -187,8 +187,8 @@ class AccelerometerService:
                                     self.real_freq,
                                     tp]
                     # #if self.num % 10 == 1:
-                    if not 200 < self.num < 1000:
-                        self.client.send_message(b'/acc', acc_message)
+                    # #if not 200 < self.num < 1000:
+                    self.client.send_message(b'/acc', acc_message)
 
                     if self.num % 100 == 0:
                         print("Suivi :", self.num)

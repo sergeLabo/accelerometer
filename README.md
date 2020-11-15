@@ -8,6 +8,14 @@ An application to record and display curve of android acceleromater made with ki
 
 [Kivy: Accelerometer](https://ressources.labomedia.org/kivy_accelerometer)
 
+### Made with
+
+* Debian 10
+* kivy
+* python 3
+* Garden Graph
+
+
 
 ### Merci à
 

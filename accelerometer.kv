@@ -53,18 +53,12 @@
     BoxLayout:
         orientation: "vertical"
         padding: 10, 10
-        BoxLayout:
-            orientation: "vertical"
-            BoxLayout:
-                size_hint_y: 0.7
-            Button:
-                size_hint_y: 0.2
-                text: 'Accéléromètre'
-                background_color: (0, 0, 0, 0)
-                font_size: "28sp"
-                on_press: app.root.ids.sm.current = "first"
-            BoxLayout:
-                size_hint_y: 0.1
+        Button:
+            text: '\n\n\n\n\n\n\n\n\n\nAccéléromètre'
+            background_color: (0, 0, 0, 0)
+            font_size: "28sp"
+            on_press: app.root.ids.sm.current = "first"
+
 
 <Screen1>:
     name: 'first'

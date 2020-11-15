@@ -349,7 +349,7 @@ class Screen2(Screen):
     def back_forward_loop(self, sens):
         while self.bf:
             sleep(0.1)
-            self.gap = self.gap + sens*10
+            self.gap = self.gap + sens*50
             if self.gap > 0: self.gap = 0
             l = len(self.app.osc.histo_xyz)
             if self.gap < -l + 500: self.gap = -l + 500
