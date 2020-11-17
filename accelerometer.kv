@@ -6,35 +6,31 @@
     ActionBar:
         pos_hint: {"top": 1}
         icon: self.icon
-
         ActionView:
             use_separator: False
             ActionPrevious:
                 markup: True
                 title: '[b]Accelerometer[/b]'
                 with_previous: False
-                app_icon: './images/icon_labo.png'
+                app_icon: './images/icon_labo_32.png'
                 color: (1, 0, 0.5, 1)
-                font_size: '[size]40sp[/size]'
-            ActionOverflow:
-            ActionButton:
-                icon: './images/icon_labo.png'
+                font_size: '[size]10sp[/size]'
                 on_release: app.root.ids.sm.current = "main"
+            ActionOverflow:
+            # #ActionButton:
+                # #icon: './images/icon_labo_32.png'
+                # #on_release: app.root.ids.sm.current = "first"
+            # #ActionGroup:
+                # #text: 'Menu'
             ActionButton:
-                # #important: True  # place après Btn2 !
                 text: 'Activité'
                 on_release: app.root.ids.sm.current = "first"
             ActionButton:
                 text: 'Courbe'
                 on_release: app.root.ids.sm.current = "second"
-            ActionGroup:
+            ActionButton:
                 text: 'Options'
-                ActionButton:
-                    text: 'Options Accelerometer'
-                    on_release: app.open_settings()
-                ActionButton:
-                    text: 'Main'
-                    on_release: app.root.ids.sm.current = "main"
+                on_release: app.open_settings()
 
     ScreenManager:
         id: sm
@@ -54,11 +50,10 @@
         orientation: "vertical"
         padding: 10, 10
         Button:
-            text: '\n\n\n\n\n\n\n\n\n\nAccéléromètre'
+            text: '\n\n\n\n\n\n\n\n\n\n\n\n\nAccéléromètre'
             background_color: (0, 0, 0, 0)
             font_size: "28sp"
             on_press: app.root.ids.sm.current = "first"
-
 
 <Screen1>:
     name: 'first'
@@ -66,51 +61,61 @@
         orientation: 'vertical'
         BoxLayout:
             orientation: 'vertical'
-            size_hint_y: 0.54
+            size_hint_y: 0.60
+
             Label:
-                id: x_y_z
-                font_size: "22sp"
-                text: 'X: Y: Z:'
-            Label:
+                size_hint_y: 0.2
                 id: activ_sensor
                 font_size: "22sp"
                 text: 'Capteur actif: '
+
             Label:
-                id: th_freq
-                font_size: "18sp"
-                text: 'Fréquence à obtenir = 10'
-            Label:
+                size_hint_y: 0.2
                 id: real_freq
                 font_size: "18sp"
-                text: 'Fréquence réelle ='
+                text: 'Fréquence:'
+
             Label:
-                id: activity_label
-                font_size: "18sp"
-                text: 'Activité: '
+                size_hint_y: 0.2
+                id: x_y_z
+                font_size: "22sp"
+                text: 'X: Y: Z:'
+
+
+            Label:
+                size_hint_y: 0.4
+                id: activity_long
+                font_size: "28sp"
+                text: 'Assis'
+
         BoxLayout:
-            size_hint_y: 0.1
+            size_hint_y: 0.08
             ToggleButton:
                 id: acceleromer_status
                 background_color: (0, 1.2, 0, 1)
-                font_size: "22sp"
+                font_size: "18sp"
                 text: "Lancer l'accéléromètre"
                 on_press: root.on_sensor_enable()
+
+
         BoxLayout:
             orientation: 'horizontal'
             size_hint_y: 0.1
             ToggleButton:
                 group: 'action'
+                id: action_0
                 size_hint_x: 0.50
                 background_color: (1, 0, 1, 1)
-                text: 'Application réduite'
+                text: '0'
                 color: (0, 1, 0, 1)
                 font_size: "14sp"
                 on_press: root.on_activity(0)
             ToggleButton:
                 group: 'action'
+                id: action_1
                 size_hint_x: 0.50
                 background_color: (1, 0, 1, 1)
-                text: 'Application plein ecran\nCouvercle rabattu'
+                text: '1'
                 color: (0, 1, 0, 1)
                 font_size: "14sp"
                 on_press: root.on_activity(1)
@@ -119,20 +124,65 @@
             size_hint_y: 0.1
             ToggleButton:
                 group: 'action'
+                id: action_2
                 size_hint_x: 0.50
                 background_color: (1, 0, 1, 1)
-                text: 'Application plein ecran\nCouvercle ouvert'
+                text: '2'
                 color: (0, 1, 0, 1)
                 font_size: "14sp"
                 on_press: root.on_activity(2)
             ToggleButton:
                 group: 'action'
+                id: action_3
                 size_hint_x: 0.50
                 background_color: (1, 0, 1, 1)
-                text: 'Application plein ecran\nCouvercle rabattu\nen mouvement'
+                text: '3'
                 color: (0, 1, 0, 1)
                 font_size: "14sp"
                 on_press: root.on_activity(3)
+        BoxLayout:
+            orientation: 'horizontal'
+            size_hint_y: 0.1
+            ToggleButton:
+                group: 'action'
+                id: action_4
+                size_hint_x: 0.50
+                background_color: (1, 0, 1, 1)
+                text: '0'
+                color: (0, 1, 0, 1)
+                font_size: "14sp"
+                on_press: root.on_activity(4)
+            ToggleButton:
+                group: 'action'
+                id: action_5
+                size_hint_x: 0.50
+                background_color: (1, 0, 1, 1)
+                text: '1'
+                color: (0, 1, 0, 1)
+                font_size: "14sp"
+                on_press: root.on_activity(5)
+        BoxLayout:
+            orientation: 'horizontal'
+            size_hint_y: 0.1
+            ToggleButton:
+                group: 'action'
+                id: action_6
+                size_hint_x: 0.50
+                background_color: (1, 0, 1, 1)
+                text: '0'
+                color: (0, 1, 0, 1)
+                font_size: "14sp"
+                on_press: root.on_activity(6)
+            ToggleButton:
+                group: 'action'
+                id: action_7
+                size_hint_x: 0.50
+                background_color: (1, 0, 1, 1)
+                text: '1'
+                color: (0, 1, 0, 1)
+                font_size: "14sp"
+                on_press: root.on_activity(7)
+
         BoxLayout:
             size_hint_y: 0.08
             orientation: 'horizontal'
@@ -152,20 +202,20 @@
                 on_press: root.do_save_npz()
                 on_release: Clock.schedule_once(root.reset_save_npz_button, 2)
         BoxLayout:
-            size_hint_y: 0.08
+            size_hint_y: 0.04
             orientation: 'horizontal'
             Button:
                 id: settings_button
                 markup: True
                 background_color: (0, 1.2, 0, 1)
-                font_size: "18sp"
+                font_size: "14sp"
                 text: '[b]Options[/b]'
                 on_release: app.open_settings()
             Button:
                 id: quit_button
                 markup: True
                 background_color: (0, 1.2, 0, 1)
-                font_size: "18sp"
+                font_size: "14sp"
                 text: '[b]Quitter[/b]'
                 on_release: root.do_quit()
 

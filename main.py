@@ -31,7 +31,6 @@ kivy.require('1.11.1')
 from kivy.app import App
 from kivy.uix.boxlayout import BoxLayout
 from kivy.clock import Clock
-from kivy.properties import NumericProperty, ObjectProperty, StringProperty
 from kivy.uix.screenmanager import ScreenManager, Screen
 from kivy_garden.graph import Graph, MeshLinePlot
 
@@ -70,6 +69,24 @@ org.kivy.accelerometer.ServicePong
 SERVICE_NAME = 'org.kivy.accelerometer.ServicePong'
 print("SERVICE_NAME:", SERVICE_NAME)
 
+TABLE = {   0: "Assis",
+            1: "Debout",
+            2: "Marche",
+            3: "Escalier",
+            4: "Assis ordinateur",
+            5: "Debout téléphone",
+            6: "Course",
+            7: "Restaurant"}
+
+TABLE_LONG = {  0: "Assis",
+                1: "Debout sans marcher",
+                2: "Marche",
+                3: "Escalier:\nmontée ou descente",
+                4: "Assis en travaillant\nsur un ordinateur",
+                5: "Debout en téléphonant",
+                6: "Course",
+                7: "Assis à la table\nd'un restaurant"}
+
 
 class OSC:
     """Ne fait que envoyer avec self.client
@@ -79,8 +96,7 @@ class OSC:
     def __init__(self):
         self.sensor = "\nRecherche d'un capteur ..."
         # a, b, c, activity, num, tempo
-        self.display_list = [0, 0, 0, -2, 0, 1, 0]
-        # #self.histo = []
+        self.display_list = [0, 0, 0, 0, 0, 1, 0]
         self.histo_xyz = []
         self.server = OSCThreadServer()
         self.server.listen(address=b'localhost',port=3003, default=True)
@@ -111,8 +127,6 @@ class OSC:
         tx = t_relativ.total_seconds()*10
 
         norme = int((a**2 + b**2 + c**2)**0.5)
-        # liste de couple (x, y)
-        # Norme
         # #self.histo.append((tx, norme))
         # Par axe
         if norme > 1:  # Bug au début
@@ -129,7 +143,8 @@ class Screen1(Screen):
     et reçues dans self.app.osc
     """
 
-    activity = NumericProperty(-1)
+    # #activity = NumericProperty(-1)
+    # #action = ListProperty([0,1,2,3,4,5,6,7])
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
@@ -147,14 +162,14 @@ class Screen1(Screen):
 
         if self.sensor_status == 0:
             self.sensor_status = 1
-            self.ids.acceleromer_status.text = "Stop Accelerometer"
+            self.ids.acceleromer_status.text = "Stopper l'accélèromètre"
             self.freq = self.app.frequency  # vient de *.ini
             self.app.osc.client.send_message(b'/frequency', [self.freq])
             print("Envoi de /freq :", self.freq)
 
         elif self.sensor_status == 1:
             self.sensor_status = 0
-            self.ids.acceleromer_status.text = "Start Accelerometer"
+            self.ids.acceleromer_status.text = "Lancer l'accéléromètre"
 
         print("Envoi de sensor_status:", self.sensor_status)
         self.app.osc.client.send_message(b'/sensor_enable', [self.sensor_status])
@@ -173,22 +188,13 @@ class Screen1(Screen):
                                                 self.app.osc.display_list[5],
                                                 self.app.osc.display_list[6])
 
-        if activity == 0:
-            activity_str = "Application réduite"
-        elif activity == 1:
-            activity_str = "Application plein ecran\nCouvercle rabattu"
-        elif activity == 2:
-            activity_str = "Application plein ecran\nCouvercle ouvert"
-        elif activity == 3:
-            activity_str = "Application plein ecran\nCouvercle rabattu\nen mouvement"
-        else:
-            activity_str = "\nVous devez sélectionner une activité !\n\n"
-
-        self.ids.x_y_z.text = str(num) + "   ---      X: " + str(a) + "   Y: " + str(b) + "   Z: " + str(c)
-        self.ids.activity_label.text = "Activité:\n" + activity_str
-        self.ids.th_freq.text = f"Fréquence à obtenir = 10"
-        self.ids.real_freq.text = f"Fréquence réelle = {real_freq}"
+        self.ids.x_y_z.text = str(num) + "\nX: " + str(a) + "  Y: " + str(b) + "  Z: " + str(c)
+        self.ids.activity_long.text = "Activité:\n" + TABLE_LONG[activity]
+        self.ids.real_freq.text = f"Fréquence  = {int(real_freq)}"
         self.ids.activ_sensor.text = f"Capteur actif: {self.app.osc.sensor}"
+
+        for a in range(8):
+            self.ids['action_' + str(a)].text = TABLE[a]
 
     def do_save_npz(self):
         self.app.osc.client.send_message(b'/save_npz', [1])
@@ -242,7 +248,6 @@ class Screen2(Screen):
         self.curve_z = MeshLinePlot(color=[0, 0, 0.8, 1])
         self.curve_z.points = []
 
-        # Appel tous les 2 secondes
         Clock.schedule_once(self._once, 1)
 
     def _once(self, dt):
@@ -261,21 +266,17 @@ class Screen2(Screen):
         """
         # TODO: Pourquoi 1 seconde
         hist = self.app.osc.histo_xyz
-        # #print("\navant", hist)
         if len(hist) > 2:
             for i in range(len(hist)):
                 trou = hist[i][0] - hist[i-1][0]
                 if trou > 2:
                     index = i  # 21
-                    manque = int(trou - 1)  # 79.53
-                    # #print("index", index, "manque", manque)  # 22 79
+                    manque = int(trou - 1)
                     # Ajout des valeurs manquantes
                     debut = hist[index-1][0] + 1
-                    # #print("debut", debut)
                     for p in range(manque):
                         hist.insert(index + p, (debut + p*1.01, [0,0,0]))
-                        # #print("i", index + p + 1,  "d", (debut + p*1.01, [0,0,0]))
-        # #print("apres", hist)
+
         self.app.osc.histo_xyz = hist
 
     def update(self, dt):
@@ -298,7 +299,6 @@ class Screen2(Screen):
                     self.add_couple(couple, t_debut)
             else:
                 t_debut = self.app.osc.histo_xyz[0][0]
-                # t_debut = 7.8500000000000005
                 for couple in self.app.osc.histo_xyz:
                     self.add_couple(couple, t_debut)
 
@@ -335,7 +335,6 @@ class Screen2(Screen):
                             tick_color=(1, 0, 1, 1),
                             label_options={'color': (0.2, 0.2, 0.2, 1)})
 
-        # #self.graph.add_plot(self.curve_norme)
         self.graph.add_plot(self.curve_x)
         self.graph.add_plot(self.curve_y)
         self.graph.add_plot(self.curve_z)
@@ -402,7 +401,7 @@ class AccelerometerApp(App):
 
     def build_config(self, config):
         config.setdefaults('accelerometer',
-                            {'frequency': 50})
+                            {'frequency': 10})
 
         config.setdefaults('kivy',
                             { 'log_level': 'debug',
@@ -465,6 +464,7 @@ class AccelerometerApp(App):
 def get_datetime(date):
     """de int(time()*1000), retourne datetime
     dans service.py
+    1604000000000 pour être inférieur au  maxi de l'OSC
     tp = int(time()*1000) - 1604000000000
     """
     return datetime.fromtimestamp((date + 1604000000000)/1000)

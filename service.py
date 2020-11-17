@@ -46,7 +46,7 @@ class AccelerometerService:
         self.t_0 = time()
         self.init_acc()
         self.virtual_acceler = None
-        self.activity = -2
+        self.activity = 0
         self.stop = 0
         self.init_dir()
         self.init_osc()
