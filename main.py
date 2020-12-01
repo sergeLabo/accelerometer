@@ -1,5 +1,4 @@
 #!python3
-# -*- coding: UTF-8 -*-
 
 """
 Bug avec debian 10
@@ -33,10 +32,7 @@ from kivy.uix.boxlayout import BoxLayout
 from kivy.clock import Clock
 from kivy.uix.screenmanager import ScreenManager, Screen
 from kivy_garden.graph import Graph, MeshLinePlot
-
-
 from plyer import utils
-
 from oscpy.client import OSCClient
 from oscpy.server import OSCThreadServer
 
@@ -52,6 +48,7 @@ if not ANDROID:
     os.environ['JAVA_HOME'] = '/usr/lib/jvm/adoptopenjdk-8-hotspot-amd64'
 
 from jnius import autoclass
+from data import data
 
 """
 SERVICE_NAME = u'{packagename}.Service{servicename}'.format(
@@ -69,25 +66,6 @@ org.kivy.accelerometer.ServicePong
 SERVICE_NAME = 'org.kivy.accelerometer.ServicePong'
 print("SERVICE_NAME:", SERVICE_NAME)
 
-TABLE = {   0: "Assis",
-            1: "Debout",
-            2: "Marche",
-            3: "Escalier",
-            4: "Assis ordinateur",
-            5: "Debout téléphone",
-            6: "Course",
-            7: "Restaurant"}
-
-TABLE_LONG = {  0: "Assis",
-                1: "Debout sans marcher",
-                2: "Marche",
-                3: "Escalier:\nmontée ou descente",
-                4: "Assis en travaillant\nsur un ordinateur",
-                5: "Debout en téléphonant",
-                6: "Course",
-                7: "Assis à la table\nd'un restaurant"}
-
-
 class OSC:
     """Ne fait que envoyer avec self.client
     et recevoir avec self.server, en com avec service.py
@@ -97,14 +75,20 @@ class OSC:
         self.sensor = "\nRecherche d'un capteur ..."
         # a, b, c, activity, num, tempo
         self.display_list = [0, 0, 0, 0, 0, 1, 0]
+        # Conservation de tout l'historique
         self.histo_xyz = []
         self.server = OSCThreadServer()
         self.server.listen(address=b'localhost',port=3003, default=True)
         self.server.bind(b'/acc', self.on_acc)
         self.server.bind(b'/sensor', self.on_sensor)
+        self.server.bind(b'/offset', self.on_offset)
         self.client = OSCClient(b'localhost', 3001)
-        self.lenght = 500
         self.t_init = None
+
+    def on_offset(self, offset):
+        """Valeur possible: Android Virtual No sensor"""
+        self.offset = offset*1000000
+        print("self.offset =", self.offset)
 
     def on_sensor(self, sens):
         """Valeur possible: Android Virtual No sensor"""
@@ -117,17 +101,16 @@ class OSC:
         a, b, c, t = (args[0], args[1], args[2], args[6])
 
         # dans service: t=int(time()*1000)-1604000000000 avec get_datetime()
-        t_absolute = get_datetime(t)
+        t_absolute = get_datetime(t, self.offset)
 
         # Datetime du début
         if not self.t_init:
             self.t_init = t_absolute
         t_relativ = t_absolute - self.t_init
-        # Dizième de secondes
-        tx = t_relativ.total_seconds()*10
 
+        # En secondes
+        tx = t_relativ.total_seconds()
         norme = int((a**2 + b**2 + c**2)**0.5)
-        # #self.histo.append((tx, norme))
         # Par axe
         if norme > 1:  # Bug au début
             self.histo_xyz.append((tx, (a, b, c)))
@@ -143,19 +126,17 @@ class Screen1(Screen):
     et reçues dans self.app.osc
     """
 
-    # #activity = NumericProperty(-1)
-    # #action = ListProperty([0,1,2,3,4,5,6,7])
-
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         self.app = App.get_running_app()
+        self.config = self.app.config
 
         self.sensor_status = 0
         # Delay de boucle
         Clock.schedule_once(self.client_once, 1)
 
     def client_once(self, dt):
-        Clock.schedule_interval(self.update_display, 1)
+        Clock.schedule_interval(self.update_display, 0.1)
 
     def on_sensor_enable(self):
         """Envoi au service de l'info sensor enable or not"""
@@ -163,7 +144,7 @@ class Screen1(Screen):
         if self.sensor_status == 0:
             self.sensor_status = 1
             self.ids.acceleromer_status.text = "Stopper l'accélèromètre"
-            self.freq = self.app.frequency  # vient de *.ini
+            self.freq = int(self.config.get('accelerometer', 'frequency'))
             self.app.osc.client.send_message(b'/frequency', [self.freq])
             print("Envoi de /freq :", self.freq)
 
@@ -175,7 +156,6 @@ class Screen1(Screen):
         self.app.osc.client.send_message(b'/sensor_enable', [self.sensor_status])
 
     def on_activity(self, act):
-        print("act", act)
         self.app.osc.client.send_message(b'/activity', [act])
 
     def update_display(self, dt):
@@ -188,13 +168,18 @@ class Screen1(Screen):
                                                 self.app.osc.display_list[5],
                                                 self.app.osc.display_list[6])
 
-        self.ids.x_y_z.text = str(num) + "\nX: " + str(a) + "  Y: " + str(b) + "  Z: " + str(c)
-        self.ids.activity_long.text = "Activité:\n" + TABLE_LONG[activity]
+        self.ids.num.text = "N°:  " + str(num)
+        self.ids.x_y_z.text = "X: " + str(a) + "  Y: " + str(b) + "  Z: " + str(c)
         self.ids.real_freq.text = f"Fréquence  = {int(real_freq)}"
-        self.ids.activ_sensor.text = f"Capteur actif: {self.app.osc.sensor}"
+        self.ids.activ_sensor.text = f"Capteur: {self.app.osc.sensor}"
 
-        for a in range(8):
-            self.ids['action_' + str(a)].text = TABLE[a]
+        self.ids.activity_long.text = "Activité:\n" + self.config.get('activities',
+                                                      'activity long ' + str(activity))
+
+        self.table = []
+        for i in range(12):
+            self.ids['action_' + str(i)].text = self.config.get('activities',
+                                                        'activity ' + str(i))
 
     def do_save_npz(self):
         self.app.osc.client.send_message(b'/save_npz', [1])
@@ -223,16 +208,16 @@ class Screen2(Screen):
         self.graph = None
         self.ylabel = "Valeur des accélérations sur x y z"
         self.titre = "Accelerometer"
-        self.xlabel = "Dixième de Secondes"
+        self.xlabel = "500 valeurs"
         self.x_ticks_minor = 5
         self.x_ticks_major = 100
         self.y_ticks_major = 3000
-        self.xmin = -500
+        self.freq = 1
         self.xmax = 0
         self.ymin = -10000
         self.ymax =  10000
         self.gap = 0
-        self.lenght = 0
+        self.lenght = 500
         self.bf = 0
 
         # Initialisation des courbes avec la couleur
@@ -253,22 +238,19 @@ class Screen2(Screen):
     def _once(self, dt):
         Clock.schedule_interval(self.update, 0.1)
         self.create_graph()
-        self.lenght = self.app.osc.lenght
 
     def histo_correction(self):
         """Les valeurs de temps manquantes sont mal affichée par Graph,
         il y a un saut du graphique au défilement, donc on ne voit pas le "trou"
         Correction de histo pour ajouter ces valeurs manquantes
         avec des valeurs xyz = 000
-        hist = self.app.osc.histo_xy
-        Entre 2 valeurs de histo: hist[i+1][0] - hist[i][0] = ~ 1.0
-        Bizarre: ce devrait être 0.1 secondes
         """
-        # TODO: Pourquoi 1 seconde
+        # hist = tout l'historique
         hist = self.app.osc.histo_xyz
         if len(hist) > 2:
             for i in range(len(hist)):
                 trou = hist[i][0] - hist[i-1][0]
+                # #print(trou)
                 if trou > 2:
                     index = i  # 21
                     manque = int(trou - 1)
@@ -280,30 +262,50 @@ class Screen2(Screen):
         self.app.osc.histo_xyz = hist
 
     def update(self, dt):
+        """Affichage de 500 valeurs
+        10 Hz = 50 s = 500 * 0.1 = 500 dizième
+        20 Hz = 25 s = 500 * 0.05s
+        self.lenght = 500
+        f = 10, 50s = 500/10; de - 50s à 0
+        f = 20, 25s = 500/20; de - 25s à 0
+
+        self.gap = int de -beaucoup à 0, fait décalage sur les 500 couples
+        """
+
+        # Actualisation de la fréquence
+        f = int(self.app.config.get('accelerometer', 'frequency'))
+        if self.freq != f:
+            self.freq = f
+            self.create_graph()
+
         self.histo_correction()
         self.curve_norme.points = []
         self.curve_x.points = []
         self.curve_y.points = []
         self.curve_z.points = []
 
+        # J'affiche 500 couples soit self.lenght = 500
         if len(self.app.osc.histo_xyz) > 5:
             nb = len(self.app.osc.histo_xyz)
+            # La pile est remplie, décalage possible avec gap
             if nb > self.lenght:
-                d = nb + self.gap - self.lenght
-                f = nb + self.gap
-                if f == 0: f = nb
-                t_debut = self.app.osc.histo_xyz[d][0]
+                debut = nb + self.gap - self.lenght
+                fin = nb + self.gap
+                # La 1ère coupe est -500:500 et non pas -500:0
+                if fin == 0: fin = nb
+                t_debut = self.app.osc.histo_xyz[debut][0]
                 # il faut [-500:500] puis [-501:-1] puis [-502:-2]
-                # -500 553 4.96 500
-                for couple in self.app.osc.histo_xyz[d:f]:
+                for couple in self.app.osc.histo_xyz[debut:fin]:
                     self.add_couple(couple, t_debut)
+            # Ajout de tous les couples pour remplir la pile
+            # pas de décalage possible avec gap
             else:
                 t_debut = self.app.osc.histo_xyz[0][0]
                 for couple in self.app.osc.histo_xyz:
                     self.add_couple(couple, t_debut)
 
     def add_couple(self, couple, t_debut):
-        x = couple[0] - t_debut - self.lenght
+        x = couple[0] - t_debut - self.lenght/self.freq
         y = couple[1][0]
         self.curve_x.points.append((x, y))
         y = couple[1][1]
@@ -311,10 +313,26 @@ class Screen2(Screen):
         y = couple[1][2]
         self.curve_z.points.append((x, y))
 
+    def get_xmin(self):
+        """Affichage de 500 valeurs
+        10 Hz = 50 s = 500 * 0.1 = 500 dizième
+        20 Hz = 25 s = 500 * 0.05s
+        self.lenght = 500
+        f = 10, 50s = 500/10; de xmin=-50s à xmax=0
+        f = 20, 25s = 500/20; de xmin=-25s à xmax=0
+        """
+        f = int(self.app.config.get('accelerometer', 'frequency'))
+
+        xmin = -int(500/f)
+        print("xmin = ", xmin)
+        return xmin
+
     def create_graph(self):
-        print("Création du graph")
+        print("Création du graph ...")
         if self.graph:
             self.ids.graph_id.remove_widget(self.graph)
+
+        xmin = self.get_xmin()
 
         self.graph = Graph( background_color=(0.8, 0.8, 0.8, 1),
                             border_color=(0, 0.1, 0.1, 1),
@@ -328,7 +346,7 @@ class Screen2(Screen):
                             padding=10,
                             x_grid=True,
                             y_grid=True,
-                            xmin=self.xmin,
+                            xmin=xmin,
                             xmax=self.xmax,
                             ymin=self.ymin,
                             ymax=self.ymax,
@@ -346,9 +364,11 @@ class Screen2(Screen):
         bt.start()
 
     def back_forward_loop(self, sens):
+        step = 0
         while self.bf:
+            step += 1
             sleep(0.1)
-            self.gap = self.gap + sens*50
+            self.gap += sens*50*step
             if self.gap > 0: self.gap = 0
             l = len(self.app.osc.histo_xyz)
             if self.gap < -l + 500: self.gap = -l + 500
@@ -360,6 +380,15 @@ class Screen2(Screen):
     def do_last(self):
         self.gap = 0
         print("Gap:", self.gap)
+
+
+class Screen3(Screen):
+    """Sélection d'une activité"""
+
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        self.app = App.get_running_app()
+        self.config = self.app.config
 
 
 class Accelerometer(BoxLayout):
@@ -397,31 +426,49 @@ class AccelerometerApp(App):
         return Accelerometer(self)
 
     def on_start(self):
-        self.frequency = int(self.config.get('accelerometer', 'frequency'))
+        value  = int(self.config.get('accelerometer', 'frequency'))
+        self.osc.client.send_message(b'/frequency', [value])
 
     def build_config(self, config):
-        config.setdefaults('accelerometer',
-                            {'frequency': 10})
+        config.setdefaults('accelerometer', {'frequency': 10})
+
+        config.setdefaults('activities',
+                           {'activity 0': 'Assis',
+                            'activity 1': 'Debout discussion',
+                            'activity 2': 'Marche',
+                            'activity 3': 'Escalier montée',
+                            'activity 4': 'Escalier descente',
+                            'activity 5': 'Assis ordinateur',
+                            'activity 6': 'Debout téléphone',
+                            'activity 7': 'Course lente',
+                            'activity 8': 'Restaurant assis',
+                            'activity 9': 'Au cinéma',
+                            'activity 10': 'Activité sexuelle',
+                            'activity 11': 'Activité secrète',
+                            'activity long 0': 'Assis',
+                            'activity long 1': 'Debout en discutant',
+                            'activity long 2': 'Marche',
+                            'activity long 3': 'Escalier montée',
+                            'activity long 4': 'Escalier descente',
+                            'activity long 5': 'Assis ordinateur',
+                            'activity long 6': 'Debout téléphone',
+                            'activity long 7': 'Course de marathon',
+                            'activity long 8': 'Restaurant assis à table',
+                            'activity long 9': 'Devant un bon film au cinéma',
+                            'activity long 10': 'Activité sexuelle',
+                            'activity long 11': 'Activité secrète'})
 
         config.setdefaults('kivy',
                             { 'log_level': 'debug',
                               'log_name': 'accelerometer_%y-%m-%d_%_.txt',
-                              'log_dir': '/sdcard',
-                              'log_enable': '1'})
+                              'log_dir': '.',
+                              'log_enable': '0'})
 
         config.setdefaults('postproc',
                             { 'double_tap_time': 250,
                               'double_tap_distance': 20})
 
     def build_settings(self, settings):
-        data = """[
-                    {"type": "title", "title":"Configuration de l'accéléromètre"},
-                    {"type": "numeric",
-                      "title": "Fréquence",
-                      "desc": "de 1 à 100",
-                      "section": "accelerometer", "key": "frequency"}
-                   ]"""
-
         # self.config est le config de build_config
         settings.add_json_panel('Accelerometer', self.config, data=data)
 
@@ -430,12 +477,12 @@ class AccelerometerApp(App):
             token = (section, key)
 
             # Frequency
+            # L'actualisation est faite dans screen1 et screen2
             if token == ('accelerometer', 'frequency'):
                 value = int(value)
                 print("Nouvelle Fréquence:", value)
                 if value < 1: value = 1
                 if value >= 100: value = 100
-                self.frequency = value
                 self.osc.client.send_message(b'/frequency', [value])
                 # Save in ini
                 self.config.set('accelerometer', 'frequency', value)
@@ -461,13 +508,13 @@ class AccelerometerApp(App):
         AccelerometerApp.get_running_app().stop()
 
 
-def get_datetime(date):
+def get_datetime(date, offset):
     """de int(time()*1000), retourne datetime
     dans service.py
-    1604000000000 pour être inférieur au  maxi de l'OSC
-    tp = int(time()*1000) - 1604000000000
+    int(t/1000000)*1000000000 pour être inférieur au  maxi de l'OSC
+    tp = int(t*1000) - int(t/1000000)*1000000000
     """
-    return datetime.fromtimestamp((date + 1604000000000)/1000)
+    return datetime.fromtimestamp((date + offset)/1000)
 
 
 if __name__ == '__main__':

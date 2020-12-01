@@ -50,7 +50,19 @@ class AccelerometerService:
         self.stop = 0
         self.init_dir()
         self.init_osc()
+        self.offset = self.get_offset()
         self.sensor_init()
+
+    def get_offset(self):
+        """
+        1604917632133 > maxi pour osc = 2 147 483 648 = 2 * 10exp9
+        1606230010010
+        1606000000000
+        """
+        offset = int(time()/1000000)*1000000000
+        print("offset =", offset, "Envoi de:", int(offset/1000000))
+        self.client.send_message(b'/offset', [int(offset/1000000)])
+        return offset
 
     def init_dir(self):
         # Création du dossier d'enregistrement
@@ -125,12 +137,17 @@ class AccelerometerService:
     def on_activity(self, msg):
         print("Nouvelle valeur pour activity =", msg)
         self.activity = int(msg)
+
         # 1604917632133 > maxi pour osc = 2 147 483 648 = 2 * 10exp9
-        tp = int(time()*1000) - 1604000000000
+        t = time()
+        # 1606230010010
+        # 1606000000000
+        tp = int(t*1000) - self.offset
         acc_message = [0, 0, 0, self.activity, self.num, self.tempo, tp]
+
         # Mise à jour de l'affichage, même si acc ne tourne pas
+        # #print("acc_message =", acc_message)
         self.client.send_message(b'/acc', acc_message)
-        print(acc_message)
 
     def on_stop(self, msg):
         print("stop =", msg)
@@ -163,7 +180,7 @@ class AccelerometerService:
 
             if self.sensor_enabled != 0:
                 if self.activity >= 0:
-                    tp = int(time()*1000) - 1604000000000
+                    tp = int(time()*1000) - self.offset
 
                     if self.num > 0:
                         # Ajout des valeurs dans les arrays
@@ -186,8 +203,6 @@ class AccelerometerService:
                                     self.num,
                                     self.real_freq,
                                     tp]
-                    # #if self.num % 10 == 1:
-                    # #if not 200 < self.num < 1000:
                     self.client.send_message(b'/acc', acc_message)
 
                     if self.num % 100 == 0:
