@@ -64,10 +64,14 @@ class FormattingData:
 
         debut = x_values[0].replace(microsecond=0).isoformat(" ")
         fin = x_values[-1].replace(microsecond=0).isoformat(" ")
-        print("Heure de début =", debut)
-        print("Heure de fin   =", fin)
-        duree = x_values[0] - x_values[-1]
-        print("Durée          =", duree)
+        print("Heure de début    =", debut)
+        print("Heure de fin      =", fin)
+        duree = x_values[-1] - x_values[0]
+        print("Durée             =", duree)
+        print("Nombre de valeurs =", len(x_values))
+        print(duree.total_seconds())
+        f = int(len(x_values)/duree.total_seconds())
+        print("Fréquence réelle  =", f)
 
         fig, ax1 = plt.subplots(1, 1, figsize=(20, 10), facecolor="#cccccc")
         ax1.set_facecolor("#eafff5")
@@ -122,7 +126,6 @@ class FormattingData:
         ax1.set_xlim(mini, maxi)
         ax2.set_xlim(mini, maxi)
 
-        print("Fréquence =", 6480 / 181)
         fig.tight_layout()  # otherwise the right y-label is slightly clipped
         ax1.legend(loc="upper center")
         ax2.legend(loc="upper right")
